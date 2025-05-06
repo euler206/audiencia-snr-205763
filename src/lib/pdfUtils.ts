@@ -1,134 +1,198 @@
 
-import { jsPDF } from 'jspdf';
+import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { AspiranteWithPrioridades, Plaza } from '@/types';
+import { Aspirante, Plaza, Prioridad } from '@/types';
 
-// Add type definition for jsPDF with autotable
+// Extend the jsPDF type to include autotable and internal properties
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
-    internal: {
-      getNumberOfPages: () => number;
-      pageSize: {
-        width: number;
-        height: number;
-        getWidth: () => number;
-        getHeight: () => number;
-      }
-    }
   }
 }
 
-export const exportAspirantesToPDF = (aspirantes: AspiranteWithPrioridades[]): void => {
-  const doc = new jsPDF();
-  
-  // Add title
-  doc.setFontSize(18);
-  doc.text('SUPERINTENDENCIA DE NOTARIADO Y REGISTRO', 105, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text('Convocatoria OPEC 205763', 105, 22, { align: 'center' });
-  doc.setFontSize(16);
-  doc.text('Listado de Aspirantes', 105, 30, { align: 'center' });
-  
-  // Current date
-  const today = new Date();
-  doc.setFontSize(10);
-  doc.text(`Fecha: ${today.toLocaleDateString('es-CO')}`, 195, 10, { align: 'right' });
-  
-  // Table headers and data
-  const tableColumn = ["Puesto", "Puntaje", "Cédula", "Nombre", "Plaza Asignada"];
-  const tableData = aspirantes.map(a => [
-    a.puesto.toString(),
-    a.puntaje.toString(),
-    a.cedula,
-    a.nombre,
-    a.plaza_deseada || "No asignada"
-  ]);
-  
-  doc.autoTable({
-    head: [tableColumn],
-    body: tableData,
-    startY: 40,
-    theme: 'grid',
-    styles: { fontSize: 10, cellPadding: 3 },
-    headStyles: { fillColor: [179, 0, 0], textColor: [255, 255, 255] }
-  });
-  
-  // Footer
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.text(`Página ${i} de ${pageCount}`, 195, doc.internal.pageSize.height - 10, { align: 'right' });
-    doc.text('SUPERINTENDENCIA DE NOTARIADO Y REGISTRO - OPEC 205763', 105, doc.internal.pageSize.height - 10, { align: 'center' });
-  }
-  
-  doc.save('listado_aspirantes_snr_opec_205763.pdf');
-};
+// We need this workaround to access internal properties
+interface jsPDFWithInternal extends jsPDF {
+  internal: {
+    pages: any[];
+    pageSize: {
+      width: number;
+      height: number;
+      getWidth: () => number;
+      getHeight: () => number;
+    };
+    getNumberOfPages: () => number;
+  };
+}
 
-export const exportPrioridadesToPDF = (
-  aspirante: AspiranteWithPrioridades, 
-  plazas: Plaza[]
+// Function to export dashboard data to PDF
+export const exportDashboardToPDF = (
+  aspirantes: Aspirante[], 
+  isAdmin: boolean,
+  title: string = 'SNR - Listado de Aspirantes'
 ): void => {
-  const doc = new jsPDF();
-  
-  // Add title
-  doc.setFontSize(18);
-  doc.text('SUPERINTENDENCIA DE NOTARIADO Y REGISTRO', 105, 15, { align: 'center' });
-  doc.setFontSize(14);
-  doc.text('Convocatoria OPEC 205763', 105, 22, { align: 'center' });
-  doc.setFontSize(16);
-  doc.text('Selección de Plazas', 105, 30, { align: 'center' });
-  
-  // Aspirante info
-  doc.setFontSize(12);
-  doc.text(`Aspirante: ${aspirante.nombre}`, 14, 45);
-  doc.text(`Cédula: ${aspirante.cedula}`, 14, 52);
-  doc.text(`Puesto: ${aspirante.puesto}`, 14, 59);
-  doc.text(`Puntaje: ${aspirante.puntaje}`, 14, 66);
-  
-  // Current date
-  const today = new Date();
-  doc.setFontSize(10);
-  doc.text(`Fecha: ${today.toLocaleDateString('es-CO')}`, 195, 10, { align: 'right' });
-  
-  // Sort prioridades
-  const prioridades = [...aspirante.prioridades].sort((a, b) => a.prioridad - b.prioridad);
-  
-  if (prioridades.length === 0) {
-    doc.setFontSize(12);
-    doc.text('No ha seleccionado plazas de preferencia.', 14, 80);
-  } else {
-    // Table headers and data
-    const tableColumn = ["Prioridad", "Municipio", "Departamento", "Vacantes"];
-    const tableData = prioridades.map(p => {
-      const plaza = plazas.find(pl => pl.municipio === p.municipio);
-      return [
-        p.prioridad.toString(),
-        p.municipio,
-        plaza?.departamento || "",
-        plaza?.vacantes.toString() || "0"
-      ];
+  try {
+    // Create a new PDF document
+    const doc = new jsPDF() as jsPDFWithInternal;
+    
+    // Set document properties
+    doc.setProperties({
+      title: title,
+      subject: 'Listado de Aspirantes',
+      author: 'Sistema SNR',
+      keywords: 'SNR, aspirantes, plazas',
+      creator: 'Sistema de Audiencia Pública SNR'
     });
     
-    doc.autoTable({
-      head: [tableColumn],
-      body: tableData,
-      startY: 75,
-      theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 3 },
-      headStyles: { fillColor: [179, 0, 0], textColor: [255, 255, 255] }
+    // Add title
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Fecha de generación: ${new Date().toLocaleString()}`, 14, 30);
+    
+    // Prepare the table headers and data
+    const headers = [
+      { header: 'Puesto', dataKey: 'puesto' },
+      { header: 'Puntaje', dataKey: 'puntaje' },
+    ];
+    
+    // Add cédula column only for admin users
+    if (isAdmin) {
+      headers.push({ header: 'Cédula', dataKey: 'cedula' });
+    }
+    
+    headers.push(
+      { header: 'Nombre', dataKey: 'nombre' },
+      { header: 'Plaza Asignada', dataKey: 'plaza_deseada' }
+    );
+    
+    // Format data
+    const data = aspirantes.map(aspirante => {
+      const row: Record<string, any> = {
+        puesto: aspirante.puesto,
+        puntaje: aspirante.puntaje || 'N/A',
+        nombre: aspirante.nombre,
+        plaza_deseada: aspirante.plaza_deseada || 'No asignada'
+      };
+      
+      // Add cédula for admin users
+      if (isAdmin) {
+        row.cedula = aspirante.cedula;
+      }
+      
+      return row;
     });
+    
+    // Generate the table
+    doc.autoTable({
+      head: [headers.map(h => h.header)],
+      body: data.map(row => headers.map(h => row[h.dataKey])),
+      startY: 40,
+      margin: { top: 40 },
+      styles: { overflow: 'linebreak' },
+      headStyles: { fillColor: [179, 0, 0] }, // SNR red color
+      didDrawPage: function(data) {
+        // Footer with page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        const pageSize = doc.internal.pageSize;
+        const pageNumber = data.pageNumber;
+        doc.setFontSize(8);
+        doc.text(
+          `Página ${pageNumber} de ${pageCount}`,
+          pageSize.width - 40,
+          pageSize.height - 10
+        );
+      }
+    });
+    
+    // Save the PDF
+    doc.save(`${title.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error('Ha ocurrido un error al generar el PDF');
   }
-  
-  // Footer
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.text(`Página ${i} de ${pageCount}`, 195, doc.internal.pageSize.height - 10, { align: 'right' });
-    doc.text('SUPERINTENDENCIA DE NOTARIADO Y REGISTRO - OPEC 205763', 105, doc.internal.pageSize.height - 10, { align: 'center' });
+};
+
+// Function to export selection data to PDF
+export const exportSelectionToPDF = (
+  aspirante: Aspirante, 
+  prioridades: Prioridad[],
+  plazas: Plaza[],
+  title: string = 'SNR - Selección de Plazas'
+): void => {
+  try {
+    // Create a new PDF document
+    const doc = new jsPDF() as jsPDFWithInternal;
+    
+    // Set document properties
+    doc.setProperties({
+      title: title,
+      subject: 'Selección de Plazas',
+      author: 'Sistema SNR',
+      keywords: 'SNR, aspirantes, selección, plazas',
+      creator: 'Sistema de Audiencia Pública SNR'
+    });
+    
+    // Add title
+    doc.setFontSize(16);
+    doc.text(title, 14, 20);
+    
+    // Add aspirante information
+    doc.setFontSize(12);
+    doc.text(`Aspirante: ${aspirante.nombre}`, 14, 30);
+    doc.text(`Cédula: ${aspirante.cedula}`, 14, 38);
+    doc.text(`Puesto: ${aspirante.puesto}`, 14, 46);
+    
+    // Add date
+    doc.setFontSize(10);
+    doc.text(`Fecha de generación: ${new Date().toLocaleString()}`, 14, 54);
+    
+    // Sort prioridades by prioridad
+    const sortedPrioridades = [...prioridades].sort((a, b) => a.prioridad - b.prioridad);
+    
+    // Prepare the table data
+    const data = sortedPrioridades.map(prioridad => {
+      const plaza = plazas.find(p => p.municipio === prioridad.municipio);
+      return {
+        prioridad: prioridad.prioridad,
+        departamento: plaza ? plaza.departamento : 'N/A',
+        municipio: prioridad.municipio,
+        vacantes: plaza ? plaza.vacantes : 0
+      };
+    });
+    
+    // Generate the table
+    doc.autoTable({
+      head: [['Prioridad', 'Departamento', 'Municipio', 'Vacantes']],
+      body: data.map(row => [
+        row.prioridad,
+        row.departamento,
+        row.municipio,
+        row.vacantes
+      ]),
+      startY: 60,
+      margin: { top: 60 },
+      styles: { overflow: 'linebreak' },
+      headStyles: { fillColor: [179, 0, 0] }, // SNR red color
+      didDrawPage: function(data) {
+        // Footer with page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        const pageSize = doc.internal.pageSize;
+        const pageNumber = data.pageNumber;
+        doc.setFontSize(8);
+        doc.text(
+          `Página ${pageNumber} de ${pageCount}`,
+          pageSize.width - 40,
+          pageSize.height - 10
+        );
+      }
+    });
+    
+    // Save the PDF
+    doc.save(`${title.replace(/\s+/g, '_')}_${aspirante.cedula}_${new Date().toISOString().split('T')[0]}.pdf`);
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error('Ha ocurrido un error al generar el PDF');
   }
-  
-  doc.save(`seleccion_plazas_${aspirante.cedula}.pdf`);
 };

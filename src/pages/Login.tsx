@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Login: React.FC = () => {
   const [cedula, setCedula] = useState('');
@@ -14,6 +13,7 @@ const Login: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const { login, loginAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -45,6 +45,10 @@ const Login: React.FC = () => {
     }
   };
 
+  const toggleAdminMode = () => {
+    setIsAdmin(!isAdmin);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
       <div className="w-full max-w-md">
@@ -54,109 +58,110 @@ const Login: React.FC = () => {
             alt="SNR Logo" 
             className="h-16 mx-auto mb-4"
           />
-          <h1 className="text-xl font-bold text-snr">SUPERINTENDENCIA DE NOTARIADO Y REGISTRO</h1>
-          <p className="text-lg text-gray-600">OPEC 205763</p>
-          <p className="text-sm text-gray-500 mt-2">Sistema de Audiencia Pública de Selección de Plazas</p>
+          <h1 className="text-xl font-bold text-snr">SNR OPEC 205763</h1>
+          <p className="text-sm text-gray-500 mt-2">Simulacro de Audiencia Pública para la Selección de Plazas</p>
         </div>
 
-        <Tabs defaultValue="aspirante" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="aspirante">Aspirante</TabsTrigger>
-            <TabsTrigger value="admin">Administrador</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="aspirante">
-            <Card>
-              <CardHeader>
-                <CardTitle>Acceso Aspirantes</CardTitle>
-                <CardDescription>
-                  Ingrese su cédula y el código OPEC para acceder al sistema.
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleAspiranteLogin}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cedula">Cédula</Label>
-                    <Input
-                      id="cedula"
-                      type="text"
-                      placeholder="Ingrese su número de cédula"
-                      value={cedula}
-                      onChange={(e) => setCedula(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="codigo-opec">Código OPEC</Label>
-                    <Input
-                      id="codigo-opec"
-                      type="text"
-                      placeholder="Ingrese el código OPEC"
-                      value={codigoOpec}
-                      onChange={(e) => setCodigoOpec(e.target.value)}
-                      required
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-snr hover:bg-snr-dark"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Ingresando...' : 'Ingresar'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="admin">
-            <Card>
-              <CardHeader>
-                <CardTitle>Acceso Administradores</CardTitle>
-                <CardDescription>
-                  Ingrese sus credenciales de administrador.
-                </CardDescription>
-              </CardHeader>
-              <form onSubmit={handleAdminLogin}>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="username">Usuario</Label>
-                    <Input
-                      id="username"
-                      type="text"
-                      placeholder="Ingrese su usuario"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="password">Contraseña</Label>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="Ingrese su contraseña"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    type="submit" 
-                    className="w-full bg-snr hover:bg-snr-dark"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? 'Ingresando...' : 'Ingresar'}
-                  </Button>
-                </CardFooter>
-              </form>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {!isAdmin ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Acceso Aspirantes</CardTitle>
+              <CardDescription>
+                Ingrese su numero de Identificacion y el numero OPEC para acceder al sistema.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleAspiranteLogin}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="cedula">Numero de Identificacion</Label>
+                  <Input
+                    id="cedula"
+                    type="text"
+                    placeholder="Ingrese su número de de Identificacion"
+                    value={cedula}
+                    onChange={(e) => setCedula(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="codigo-opec">Numero de OPEC</Label>
+                  <Input
+                    id="codigo-opec"
+                    type="text"
+                    placeholder="Ingrese su numero de OPEC"
+                    value={codigoOpec}
+                    onChange={(e) => setCodigoOpec(e.target.value)}
+                    required
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-snr hover:bg-snr-dark"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Ingresando...' : 'Ingresar'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Acceso Administradores</CardTitle>
+              <CardDescription>
+                Ingrese sus credenciales de administrador.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleAdminLogin}>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="username">Usuario</Label>
+                  <Input
+                    id="username"
+                    type="text"
+                    placeholder="Ingrese su usuario"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Contraseña</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="Ingrese su contraseña"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  type="submit" 
+                  className="w-full bg-snr hover:bg-snr-dark"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Ingresando...' : 'Ingresar'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        )}
+        
+        {/* Hidden button for admin access - only visible when clicking in a specific area */}
+        <div className="mt-8 text-center">
+          <button 
+            onClick={toggleAdminMode} 
+            className="text-transparent hover:text-transparent focus:outline-none cursor-default" 
+            aria-hidden="true"
+          >
+            Admin
+          </button>
+        </div>
       </div>
     </div>
   );
