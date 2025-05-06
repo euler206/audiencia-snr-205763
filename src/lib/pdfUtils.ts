@@ -1,7 +1,7 @@
 
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
-import { Aspirante, Plaza, Prioridad } from '@/types';
+import { Aspirante, Plaza, Prioridad, AspiranteWithPrioridades } from '@/types';
 
 // Extend the jsPDF type to include autotable
 declare module 'jspdf' {
@@ -10,7 +10,7 @@ declare module 'jspdf' {
   }
 }
 
-// Define a more complete internal interface to fix TS errors
+// Define a more complete internal interface
 interface jsPDFWithInternal extends jsPDF {
   internal: {
     events: any;
@@ -27,7 +27,7 @@ interface jsPDFWithInternal extends jsPDF {
   };
 }
 
-// Function to export dashboard data to PDF - renamed for consistency with imports
+// Function to export dashboard data to PDF
 export const exportAspirantesToPDF = (
   aspirantes: Aspirante[], 
   isAdmin: boolean = true,
@@ -117,9 +117,9 @@ export const exportAspirantesToPDF = (
   }
 };
 
-// Function to export selection data to PDF - renamed for consistency with imports
+// Function to export selection data to PDF
 export const exportPrioridadesToPDF = (
-  aspirante: Aspirante, 
+  aspirante: AspiranteWithPrioridades, 
   plazas: Plaza[],
   title: string = 'SNR - Selección de Plazas'
 ): void => {
@@ -151,7 +151,7 @@ export const exportPrioridadesToPDF = (
     doc.text(`Fecha de generación: ${new Date().toLocaleString()}`, 14, 54);
     
     // Check if aspirante has prioridades property
-    if (!aspirante.prioridades) {
+    if (!aspirante.prioridades || aspirante.prioridades.length === 0) {
       // If no prioridades, just show a message
       doc.text('No hay prioridades seleccionadas para este aspirante.', 14, 62);
       
