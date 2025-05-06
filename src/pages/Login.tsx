@@ -54,7 +54,7 @@ const Login: React.FC = () => {
           <CardHeader>
             <CardTitle>Acceso Aspirantes</CardTitle>
             <CardDescription>
-              Ingrese su numero de Identificacion y el numero OPEC para acceder al sistema.
+              Sistema de Selección de Plazas
             </CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>

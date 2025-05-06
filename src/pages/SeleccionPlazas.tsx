@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -6,6 +7,14 @@ import { exportPrioridadesToPDF } from '@/lib/pdfUtils';
 import Layout from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { 
   Card, 
   CardContent, 
@@ -31,6 +40,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import { Prioridad, PlazaWithOcupacion } from '@/types';
 import { FileText, RotateCcw, Save, Search } from 'lucide-react';
@@ -39,12 +54,21 @@ import { toast } from '@/hooks/use-toast';
 const SeleccionPlazas: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { currentAspirante, plazas, loading, savePrioridades } = useAspirantesPlazas(user?.id);
+  const { 
+    currentAspirante, 
+    plazas, 
+    loading, 
+    savePrioridades, 
+    filteredAspirantes, 
+    searchQuery, 
+    setSearchQuery 
+  } = useAspirantesPlazas(user?.id);
   
   const [searchMunicipio, setSearchMunicipio] = useState('');
   const [prioridades, setPrioridades] = useState<Omit<Prioridad, 'id'>[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [showSavingDialog, setShowSavingDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("aspirantes");
 
   // Redireccionar si no es un aspirante o no se ha cargado el aspirante
   useEffect(() => {
@@ -268,72 +292,140 @@ const SeleccionPlazas: React.FC = () => {
           </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Seleccione sus Plazas de Preferencia</CardTitle>
-            <CardDescription>
-              Puede seleccionar hasta {maxPrioridades} plazas en orden de preferencia.
-              Ha seleccionado {prioridades.length} de {maxPrioridades}.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center mb-4">
-              <Search className="mr-2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Buscar por municipio o departamento..."
-                value={searchMunicipio}
-                onChange={(e) => setSearchMunicipio(e.target.value)}
-                className="flex-1"
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredPlazas.map((plaza) => {
-                const prioridadNum = getPrioridadForMunicipio(plaza.municipio);
-                const isSelected = prioridadNum !== null;
-                
-                return (
-                  <Card 
-                    key={plaza.id} 
-                    className={`cursor-pointer ${isSelected ? 'border-snr bg-red-50' : 'hover:border-gray-300'}`}
-                    onClick={() => handlePrioridadChange(plaza.municipio)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <h3 className="font-semibold">{plaza.municipio}</h3>
-                        {isSelected && (
-                          <Badge className="bg-snr hover:bg-snr-dark">
-                            Prioridad {prioridadNum}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-500 mb-3">
-                        {plaza.departamento}
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <div className="text-sm">
-                          {renderOcupacionStatus(plaza)}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-              
-              {filteredPlazas.length === 0 && (
-                <div className="col-span-full text-center py-10 text-gray-500">
-                  {loading ? 'Cargando plazas...' : 'No se encontraron plazas'}
+        <Tabs defaultValue="aspirantes" onValueChange={setActiveTab} value={activeTab} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="aspirantes">Listado de Aspirantes</TabsTrigger>
+            <TabsTrigger value="seleccion">Selección de Plazas</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="aspirantes" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Listado de Aspirantes</CardTitle>
+                <CardDescription>
+                  {filteredAspirantes.length} aspirantes registrados para la convocatoria OPEC 205763
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center mb-4">
+                  <Search className="mr-2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por nombre, cédula o plaza asignada..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="flex-1"
+                  />
                 </div>
-              )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <p className="text-sm text-gray-500">
-              Las plazas se asignan por orden de prioridad y puesto.
-              Los puestos con menor número tienen preferencia.
-            </p>
-          </CardFooter>
-        </Card>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[80px]">Puesto</TableHead>
+                        <TableHead className="w-[80px]">Puntaje</TableHead>
+                        <TableHead>Nombre</TableHead>
+                        <TableHead>Plaza Asignada</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredAspirantes.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-8 text-gray-500">
+                            {loading ? 'Cargando aspirantes...' : 'No se encontraron aspirantes'}
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        filteredAspirantes.map((aspirante) => (
+                          <TableRow key={aspirante.id}>
+                            <TableCell>{aspirante.puesto}</TableCell>
+                            <TableCell>{aspirante.puntaje}</TableCell>
+                            <TableCell>{aspirante.nombre}</TableCell>
+                            <TableCell>
+                              {aspirante.plaza_deseada || <span className="text-gray-400">No asignada</span>}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+              <CardFooter className="flex justify-between">
+                <p className="text-sm text-gray-500">
+                  Ordenados por puesto (menor a mayor)
+                </p>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="seleccion" className="mt-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Seleccione sus Plazas de Preferencia</CardTitle>
+                <CardDescription>
+                  Puede seleccionar hasta {maxPrioridades} plazas en orden de preferencia.
+                  Ha seleccionado {prioridades.length} de {maxPrioridades}.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center mb-4">
+                  <Search className="mr-2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Buscar por municipio o departamento..."
+                    value={searchMunicipio}
+                    onChange={(e) => setSearchMunicipio(e.target.value)}
+                    className="flex-1"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredPlazas.map((plaza) => {
+                    const prioridadNum = getPrioridadForMunicipio(plaza.municipio);
+                    const isSelected = prioridadNum !== null;
+                    
+                    return (
+                      <Card 
+                        key={plaza.id} 
+                        className={`cursor-pointer ${isSelected ? 'border-snr bg-red-50' : 'hover:border-gray-300'}`}
+                        onClick={() => handlePrioridadChange(plaza.municipio)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="font-semibold">{plaza.municipio}</h3>
+                            {isSelected && (
+                              <Badge className="bg-snr hover:bg-snr-dark">
+                                Prioridad {prioridadNum}
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="text-sm text-gray-500 mb-3">
+                            {plaza.departamento}
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <div className="text-sm">
+                              {renderOcupacionStatus(plaza)}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                  
+                  {filteredPlazas.length === 0 && (
+                    <div className="col-span-full text-center py-10 text-gray-500">
+                      {loading ? 'Cargando plazas...' : 'No se encontraron plazas'}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+              <CardFooter>
+                <p className="text-sm text-gray-500">
+                  Las plazas se asignan por orden de prioridad y puesto.
+                  Los puestos con menor número tienen preferencia.
+                </p>
+              </CardFooter>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
 
       {/* Diálogo de proceso de guardado */}
