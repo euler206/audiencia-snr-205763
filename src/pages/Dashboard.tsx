@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -44,6 +43,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Search, FileText, Edit, Trash2 } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -69,7 +69,19 @@ const Dashboard: React.FC = () => {
   }, [user, navigate]);
 
   const handleExportPDF = () => {
-    exportAspirantesToPDF(filteredAspirantes);
+    try {
+      exportAspirantesToPDF(filteredAspirantes);
+      toast({
+        title: "PDF generado con éxito",
+        description: "El archivo se ha descargado correctamente",
+      });
+    } catch (error) {
+      toast({
+        title: "Error al generar PDF",
+        description: "No se pudo generar el archivo PDF",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleResetPlazas = async () => {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -35,6 +34,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Prioridad, PlazaWithOcupacion } from '@/types';
 import { FileText, RotateCcw, Save, Search } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const SeleccionPlazas: React.FC = () => {
   const { user } = useAuth();
@@ -141,15 +141,27 @@ const SeleccionPlazas: React.FC = () => {
   // Exportar selección a PDF
   const handleExportPDF = () => {
     if (currentAspirante) {
-      // Crear una versión del aspirante con las prioridades actuales
-      const aspiranteWithCurrentPrioridades = {
-        ...currentAspirante,
-        prioridades: prioridades.map((p, idx) => ({
-          ...p,
-          id: idx + 1, // ID temporal para el PDF
-        }))
-      };
-      exportPrioridadesToPDF(aspiranteWithCurrentPrioridades, plazas);
+      try {
+        // Crear una versión del aspirante con las prioridades actuales
+        const aspiranteWithCurrentPrioridades = {
+          ...currentAspirante,
+          prioridades: prioridades.map((p, idx) => ({
+            ...p,
+            id: idx + 1, // ID temporal para el PDF
+          }))
+        };
+        exportPrioridadesToPDF(aspiranteWithCurrentPrioridades, plazas);
+        toast({
+          title: "PDF generado con éxito",
+          description: "El archivo se ha descargado correctamente",
+        });
+      } catch (error) {
+        toast({
+          title: "Error al generar PDF",
+          description: "No se pudo generar el archivo PDF",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -326,7 +338,7 @@ const SeleccionPlazas: React.FC = () => {
 
       {/* Diálogo de proceso de guardado */}
       <Dialog open={showSavingDialog} onOpenChange={setShowSavingDialog}>
-        <DialogContent className="sm:max-w-md" hideCloseButton>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Procesando selección</DialogTitle>
           </DialogHeader>

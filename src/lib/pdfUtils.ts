@@ -3,36 +3,39 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { Aspirante, Plaza, Prioridad } from '@/types';
 
-// Extend the jsPDF type to include autotable and internal properties
+// Extend the jsPDF type to include autotable
 declare module 'jspdf' {
   interface jsPDF {
     autoTable: (options: any) => jsPDF;
   }
 }
 
-// We need this workaround to access internal properties
+// Define a more complete internal interface to fix TS errors
 interface jsPDFWithInternal extends jsPDF {
   internal: {
-    pages: any[];
+    events: any;
+    scaleFactor: number;
     pageSize: {
       width: number;
       height: number;
       getWidth: () => number;
       getHeight: () => number;
     };
+    pages: any[];
     getNumberOfPages: () => number;
+    getEncryptor?: (objectId: number) => (data: string) => string;
   };
 }
 
-// Function to export dashboard data to PDF
-export const exportDashboardToPDF = (
+// Function to export dashboard data to PDF - renamed for consistency with imports
+export const exportAspirantesToPDF = (
   aspirantes: Aspirante[], 
-  isAdmin: boolean,
+  isAdmin: boolean = true,
   title: string = 'SNR - Listado de Aspirantes'
 ): void => {
   try {
     // Create a new PDF document
-    const doc = new jsPDF() as jsPDFWithInternal;
+    const doc = new jsPDF() as unknown as jsPDFWithInternal;
     
     // Set document properties
     doc.setProperties({
@@ -114,16 +117,15 @@ export const exportDashboardToPDF = (
   }
 };
 
-// Function to export selection data to PDF
-export const exportSelectionToPDF = (
+// Function to export selection data to PDF - renamed for consistency with imports
+export const exportPrioridadesToPDF = (
   aspirante: Aspirante, 
-  prioridades: Prioridad[],
   plazas: Plaza[],
   title: string = 'SNR - Selección de Plazas'
 ): void => {
   try {
     // Create a new PDF document
-    const doc = new jsPDF() as jsPDFWithInternal;
+    const doc = new jsPDF() as unknown as jsPDFWithInternal;
     
     // Set document properties
     doc.setProperties({
@@ -148,8 +150,18 @@ export const exportSelectionToPDF = (
     doc.setFontSize(10);
     doc.text(`Fecha de generación: ${new Date().toLocaleString()}`, 14, 54);
     
+    // Check if aspirante has prioridades property
+    if (!aspirante.prioridades) {
+      // If no prioridades, just show a message
+      doc.text('No hay prioridades seleccionadas para este aspirante.', 14, 62);
+      
+      // Save the PDF
+      doc.save(`${title.replace(/\s+/g, '_')}_${aspirante.cedula}_${new Date().toISOString().split('T')[0]}.pdf`);
+      return;
+    }
+    
     // Sort prioridades by prioridad
-    const sortedPrioridades = [...prioridades].sort((a, b) => a.prioridad - b.prioridad);
+    const sortedPrioridades = [...aspirante.prioridades].sort((a, b) => a.prioridad - b.prioridad);
     
     // Prepare the table data
     const data = sortedPrioridades.map(prioridad => {
